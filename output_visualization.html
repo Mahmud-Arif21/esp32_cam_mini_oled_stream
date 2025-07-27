@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>128x64 OLED Display Simulator</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        .container {
+            text-align: center;
+            background-color: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        }
+        #oledCanvas {
+            background-color: #000;
+            border: 2px solid #4a4a4a;
+            image-rendering: pixelated;
+            width: 256px; /* 2x scaling for visibility */
+            height: 128px;
+        }
+        #webcamFeed {
+            display: none; /* Hidden, used for processing */
+        }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        button, input[type="range"] {
+            background-color: #3a3a3a;
+            color: #e0e0e0;
+            border: 1px solid #4a4a4a;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        button:hover, input[type="range"]:hover {
+            background-color: #4a4a4a;
+        }
+        label {
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        p {
+            font-size: 14px;
+            color: #b0b0b0;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>128x64 OLED Simulator</h1>
+        <p>Webcam feed processed to black-and-white display</p>
+        <canvas id="oledCanvas" width="128" height="64"></canvas>
+        <video id="webcamFeed" autoplay playsinline></video>
+        <div class="controls">
+            <label for="threshold">Threshold: <span id="thresholdValue">120</span></label>
+            <input type="range" id="threshold" min="0" max="255" value="120">
+            <button onclick="startWebcam()">Restart Webcam</button>
+            <button onclick="stopWebcam()">Stop Webcam</button>
+        </div>
+    </div>
+
+    <script>
+        const oledCanvas = document.getElementById('oledCanvas');
+        const ctx = oledCanvas.getContext('2d', { willReadFrequently: true });
+        const webcamFeed = document.getElementById('webcamFeed');
+        const thresholdInput = document.getElementById('threshold');
+        const thresholdValueDisplay = document.getElementById('thresholdValue');
+
+        let isStreaming = false;
+        const TARGET_WIDTH = 128;
+        const TARGET_HEIGHT = 64;
+        let threshold = 120;
+
+        // Update threshold display
+        thresholdInput.addEventListener('input', () => {
+            threshold = parseInt(thresholdInput.value);
+            thresholdValueDisplay.textContent = threshold;
+        });
+
+        // Start webcam
+        async function startWebcam() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 640, height: 480 } 
+                });
+                webcamFeed.srcObject = stream;
+                isStreaming = true;
+                processFrame();
+            } catch (err) {
+                console.error('Error accessing webcam:', err);
+                alert('Failed to access webcam. Please allow camera access.');
+            }
+        }
+
+        // Stop webcam
+        function stopWebcam() {
+            if (webcamFeed.srcObject) {
+                webcamFeed.srcObject.getTracks().forEach(track => track.stop());
+                webcamFeed.srcObject = null;
+                isStreaming = false;
+                ctx.fillStyle = 'black';
+                ctx.fillRect(0, 0, TARGET_WIDTH, TARGET_HEIGHT);
+            }
+        }
+
+        // Process webcam frame to simulate OLED
+        function processFrame() {
+            if (!isStreaming) return;
+
+            // Draw webcam frame to an off-screen canvas for processing
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 96; // Source resolution similar to ESP32-CAM
+            tempCanvas.height = 96;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(webcamFeed, 0, 0, 96, 96);
+
+            // Get grayscale pixel data
+            const imageData = tempCtx.getImageData(0, 0, 96, 96);
+            const pixels = imageData.data;
+
+            // Clear OLED canvas
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, TARGET_WIDTH, TARGET_HEIGHT);
+
+            // Scale and convert to 1-bit monochrome
+            const scaleX = 96 / TARGET_WIDTH;
+            const scaleY = 96 / TARGET_HEIGHT;
+
+            for (let y = 0; y < TARGET_HEIGHT; y++) {
+                const srcY = Math.min(Math.floor(y * scaleY), 95);
+                for (let x = 0; x < TARGET_WIDTH; x++) {
+                    const srcX = Math.min(Math.floor(x * scaleX), 95);
+                    const srcIndex = (srcY * 96 + srcX) * 4;
+                    // Convert to grayscale: 0.299R + 0.587G + 0.114B
+                    const gray = 0.299 * pixels[srcIndex] + 
+                                0.587 * pixels[srcIndex + 1] + 
+                                0.114 * pixels[srcIndex + 2];
+                    // Apply threshold for 1-bit display
+                    ctx.fillStyle = gray > threshold ? 'white' : 'black';
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+
+            requestAnimationFrame(processFrame);
+        }
+
+        // Initialize webcam on load
+        startWebcam();
+    </script>
+</body>
+</html>
