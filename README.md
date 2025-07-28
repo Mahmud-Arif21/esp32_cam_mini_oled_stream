@@ -38,7 +38,7 @@ This project demonstrates how to stream a live camera feed from an ESP32-CAM mod
    - Open `esp32cam_to_oled.ino` in Arduino IDE.
    - Select `AI Thinker ESP32-CAM` under `Tools > Board`.
    - Set the partition scheme to `Huge APP (3MB No OTA)` for extra space (`Tools > Partition Scheme`).
-   - Connect your ESP32-CAM via USB and upload.
+   - Connect your ESP32-CAM via USB and upload. You may need to press the **Boot** button for 3-4 seconds when uploading starts.
 4. **Power Supply**:
    - Use a stable 5V USB power source. PC USB ports usually provide stable enough power but sometimes the ESP32-CAM can be picky.
 
