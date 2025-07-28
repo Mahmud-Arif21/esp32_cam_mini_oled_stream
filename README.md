@@ -2,7 +2,7 @@
 
 This project demonstrates how to stream a live camera feed from an ESP32-CAM module to a 128x64 OLED display. This guide will walk you through the setup, highlight common pitfalls (and how to dodge them), and provide a working example. By the end, you'll have a tiny video feed running—perfect for spying on your pet hamster or just flexing your DIY skills! (I tried this just because I wanted to)
 
-![Sample](assets/visualization.png)  
+![Sample](assets/sample.gif)  
 
 ## Features
 - Streams live video from the ESP32-CAM to an 1.3" 128X64 OLED display
